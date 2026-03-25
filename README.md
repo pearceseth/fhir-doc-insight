@@ -1,4 +1,4 @@
-# ClinDoc Insight
+# ClinDoc Insight (WIP)
 
 A clinical documentation viewer that aggregates patient and encounter data from FHIR-compliant healthcare systems.
 
