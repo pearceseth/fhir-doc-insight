@@ -7,18 +7,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { fetchEncounters, type Encounter } from "@/api/fhir";
 
-export function Dashboard() {
+interface DashboardProps {
+  onSelectEncounter: (encounterId: string) => void;
+}
+
+const PAGE_SIZE = 20;
+
+export function Dashboard({ onSelectEncounter }: DashboardProps) {
   const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadEncounters() {
+      setLoading(true);
       try {
-        const data = await fetchEncounters();
+        const data = await fetchEncounters(page, PAGE_SIZE);
         setEncounters(data.encounters);
+        setTotalPages(data.totalPages);
+        setTotal(data.total);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load encounters");
       } finally {
@@ -26,12 +39,18 @@ export function Dashboard() {
       }
     }
     loadEncounters();
-  }, []);
+  }, [page]);
 
   function getEncounterType(encounter: Encounter): string {
     if (encounter.type && encounter.type.length > 0) {
       const type = encounter.type[0];
-      return type.text || type.coding?.[0]?.display || "Unknown";
+      if (type.text) return type.text;
+      if (type.coding && type.coding.length > 0) {
+        return type.coding[0].display || type.coding[0].code || "Unknown";
+      }
+    }
+    if (encounter.class) {
+      return encounter.class.display || encounter.class.code || "Unknown";
     }
     return "Unknown";
   }
@@ -45,14 +64,6 @@ export function Dashboard() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading encounters...</p>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -63,36 +74,40 @@ export function Dashboard() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6">Encounters</h1>
+      <h1 className="text-2xl font-bold mb-6">Recent Encounters</h1>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Patient Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Class</TableHead>
+              <TableHead>Patient</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Start Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {encounters.length === 0 ? (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  Loading encounters...
+                </TableCell>
+              </TableRow>
+            ) : encounters.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground">
                   No encounters found
                 </TableCell>
               </TableRow>
             ) : (
               encounters.map((encounter) => (
-                <TableRow key={encounter.id}>
-                  <TableCell className="font-mono text-sm">{encounter.id}</TableCell>
+                <TableRow
+                  key={encounter.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => onSelectEncounter(encounter.id)}
+                >
                   <TableCell>{encounter._patient_name || "Unknown"}</TableCell>
-                  <TableCell>
-                    <span className="capitalize">{encounter.status}</span>
-                  </TableCell>
-                  <TableCell>{encounter.class?.display || encounter.class?.code || "N/A"}</TableCell>
                   <TableCell>{getEncounterType(encounter)}</TableCell>
+                  <TableCell className="capitalize">{encounter.status}</TableCell>
                   <TableCell>{formatDate(encounter.period?.start)}</TableCell>
                 </TableRow>
               ))
@@ -100,9 +115,32 @@ export function Dashboard() {
           </TableBody>
         </Table>
       </div>
-      <p className="text-sm text-muted-foreground mt-4">
-        Total encounters: {encounters.length}
-      </p>
+      <div className="flex items-center justify-between mt-4">
+        <p className="text-sm text-muted-foreground">
+          {total !== null ? `Total encounters: ${total}` : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1 || loading}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} {totalPages !== null ? `of ${totalPages}` : ""}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={(totalPages !== null && page >= totalPages) || loading}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

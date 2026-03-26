@@ -482,10 +482,10 @@ Note: `db/` directory removed. No SQLAlchemy, no database models, no migration t
 **Milestone:** Data flows HAPI → FastAPI → in-memory cache → React browser
 
 ### Phase 2 — FHIR Data Model & Analytics 
-- [ ] Implement all resource fetchers with cache-aside pattern: Observation, DocumentReference, MedicationRequest, MedicationAdministration, Condition
-- [ ] Analytics layer in Python/pandas: completeness scoring, observation density, med rec status
-- [ ] Wire analytics to frontend charts (Recharts)
-- [ ] Verify cache key conventions are consistent across all fetchers
+- [x] Implement all resource fetchers with cache-aside pattern: Observation, DocumentReference, MedicationRequest, MedicationAdministration, Condition
+- [x] Analytics layer in Python/pandas: completeness scoring, observation density, med rec status
+- [x] Wire analytics to frontend charts (Recharts)
+- [x] Verify cache key conventions are consistent across all fetchers
 
 **Milestone:** Dashboard showing real metrics computed over cached HAPI synthetic data
 
