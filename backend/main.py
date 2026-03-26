@@ -77,7 +77,15 @@ async def get_patient_encounters(patient_id: str):
 
 
 @app.get("/api/encounters")
-async def list_all_encounters(page: int = 1, page_size: int = 20):
+async def list_all_encounters(
+    page: int = 1,
+    page_size: int = 20,
+    missing_diagnosis: bool = False,
+    missing_participant: bool = False,
+    missing_reason: bool = False,
+    missing_type: bool = False,
+    missing_class: bool = False,
+):
     if page < 1:
         page = 1
     if page_size < 1 or page_size > 100:
@@ -85,7 +93,13 @@ async def list_all_encounters(page: int = 1, page_size: int = 20):
 
     offset = (page - 1) * page_size
     encounters, total = await fhir_client.fetch_encounters_paginated(
-        count=page_size, offset=offset
+        count=page_size,
+        offset=offset,
+        missing_diagnosis=missing_diagnosis,
+        missing_participant=missing_participant,
+        missing_reason=missing_reason,
+        missing_type=missing_type,
+        missing_class=missing_class,
     )
 
     encounter_list = []

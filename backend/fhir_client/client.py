@@ -77,6 +77,9 @@ class FHIRClient:
 
     def _normalize_encounter(self, resource: dict) -> dict:
         """Normalize encounter data to pass FHIR validation."""
+        # Add default status if missing (required field)
+        if "status" not in resource or resource["status"] is None:
+            resource["status"] = "unknown"
         # Add default class if missing (required field)
         if "class" not in resource:
             resource["class"] = {"code": "unknown", "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode"}
@@ -97,12 +100,29 @@ class FHIRClient:
         return resource
 
     async def fetch_encounters_paginated(
-        self, count: int = 20, offset: int = 0
+        self,
+        count: int = 20,
+        offset: int = 0,
+        missing_diagnosis: bool = False,
+        missing_participant: bool = False,
+        missing_reason: bool = False,
+        missing_type: bool = False,
+        missing_class: bool = False,
     ) -> tuple[list[Encounter], int | None]:
         """Fetch encounters with pagination. Returns (encounters, total)."""
         params = {"_sort": "-date", "_count": count}
         if offset > 0:
             params["_offset"] = offset
+        if missing_diagnosis:
+            params["diagnosis:missing"] = "true"
+        if missing_participant:
+            params["participant:missing"] = "true"
+        if missing_reason:
+            params["reason-code:missing"] = "true"
+        if missing_type:
+            params["type:missing"] = "true"
+        if missing_class:
+            params["class:missing"] = "true"
 
         response = await self.client.get(
             f"{self.base_url}/Encounter",

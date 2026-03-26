@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { fetchEncounters, type Encounter } from "@/api/fhir";
+import { fetchEncounters, type Encounter, type EncounterFilters } from "@/api/fhir";
 
 interface DashboardProps {
   onSelectEncounter: (encounterId: string) => void;
@@ -23,12 +23,13 @@ export function Dashboard({ onSelectEncounter }: DashboardProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [total, setTotal] = useState<number | null>(null);
+  const [filters, setFilters] = useState<EncounterFilters>({});
 
   useEffect(() => {
     async function loadEncounters() {
       setLoading(true);
       try {
-        const data = await fetchEncounters(page, PAGE_SIZE);
+        const data = await fetchEncounters(page, PAGE_SIZE, filters);
         setEncounters(data.encounters);
         setTotalPages(data.totalPages);
         setTotal(data.total);
@@ -39,7 +40,12 @@ export function Dashboard({ onSelectEncounter }: DashboardProps) {
       }
     }
     loadEncounters();
-  }, [page]);
+  }, [page, filters]);
+
+  function toggleFilter(key: keyof EncounterFilters) {
+    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+    setPage(1);
+  }
 
   function getEncounterType(encounter: Encounter): string {
     if (encounter.type && encounter.type.length > 0) {
@@ -75,6 +81,43 @@ export function Dashboard({ onSelectEncounter }: DashboardProps) {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">Recent Encounters</h1>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button
+          variant={filters.missingDiagnosis ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleFilter("missingDiagnosis")}
+        >
+          Missing Diagnosis
+        </Button>
+        <Button
+          variant={filters.missingParticipant ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleFilter("missingParticipant")}
+        >
+          Missing Provider
+        </Button>
+        <Button
+          variant={filters.missingReason ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleFilter("missingReason")}
+        >
+          Missing Reason
+        </Button>
+        <Button
+          variant={filters.missingType ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleFilter("missingType")}
+        >
+          Missing Type
+        </Button>
+        <Button
+          variant={filters.missingClass ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleFilter("missingClass")}
+        >
+          Missing Class
+        </Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

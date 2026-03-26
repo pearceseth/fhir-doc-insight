@@ -181,11 +181,38 @@ export async function fetchPatientEncounters(patientId: string): Promise<Encount
   return response.json();
 }
 
-export async function fetchEncounters(page = 1, pageSize = 20): Promise<EncountersResponse> {
+export interface EncounterFilters {
+  missingDiagnosis?: boolean;
+  missingParticipant?: boolean;
+  missingReason?: boolean;
+  missingType?: boolean;
+  missingClass?: boolean;
+}
+
+export async function fetchEncounters(
+  page = 1,
+  pageSize = 20,
+  filters?: EncounterFilters
+): Promise<EncountersResponse> {
   const params = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
   });
+  if (filters?.missingDiagnosis) {
+    params.set("missing_diagnosis", "true");
+  }
+  if (filters?.missingParticipant) {
+    params.set("missing_participant", "true");
+  }
+  if (filters?.missingReason) {
+    params.set("missing_reason", "true");
+  }
+  if (filters?.missingType) {
+    params.set("missing_type", "true");
+  }
+  if (filters?.missingClass) {
+    params.set("missing_class", "true");
+  }
   const response = await fetch(`/api/encounters?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch encounters: ${response.statusText}`);
