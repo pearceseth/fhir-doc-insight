@@ -1,22 +1,69 @@
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: clinidoc-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # GPU support (uncomment for NVIDIA GPU)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Pull the model on startup
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: clinidoc-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3.2\"}'"
+    restart: "no"
+
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clinidoc-backend
     ports:
       - "8000:8000"
     environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
       - FHIR_BASE_URL=http://hapi.fhir.org/baseR4
+    depends_on:
+      ollama:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: clinidoc-frontend
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://backend:8000
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
+
+volumes:
+  ollama_data:

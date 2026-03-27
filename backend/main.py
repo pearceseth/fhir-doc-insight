@@ -1,9 +1,13 @@
 import asyncio
+import json
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from cache.fhir_cache import (
     cache,
@@ -23,6 +27,23 @@ from analytics.medications import calculate_medication_reconciliation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Lazy import for agent (requires langchain)
+clindoc_agent = None
+conversation_store = None
+
+def _get_agent():
+    global clindoc_agent, conversation_store
+    if clindoc_agent is None:
+        try:
+            from agent.agent import clindoc_agent as agent
+            from agent.conversation import conversation_store as store
+            clindoc_agent = agent
+            conversation_store = store
+        except ImportError as e:
+            logger.warning(f"Agent not available: {e}")
+            raise HTTPException(status_code=503, detail="Assistant not available - langchain not installed")
+    return clindoc_agent, conversation_store
 
 
 @asynccontextmanager
@@ -303,3 +324,91 @@ async def get_medication_reconciliation():
             )
 
     return {"reconciliation": results, "count": len(results)}
+
+
+# ============================================================================
+# Assistant API Endpoints
+# ============================================================================
+
+
+class QueryRequest(BaseModel):
+    """Request body for assistant query endpoint."""
+
+    query: str
+    conversation_id: str | None = None
+
+
+@app.post("/api/assistant/query")
+async def query_assistant(request: QueryRequest) -> StreamingResponse:
+    """
+    Stream agent reasoning and response via SSE.
+
+    Request:
+    {
+        "query": "What percentage of finished encounters...",
+        "conversation_id": "optional-uuid"
+    }
+
+    SSE Events:
+    - event: thought, data: {"step": 1, "content": "Calculating date range..."}
+    - event: tool_call, data: {"tool": "search_encounters", "args": {...}}
+    - event: tool_result, data: {"tool": "search_encounters", "result": {...}}
+    - event: answer, data: {"content": "Based on the data..."}
+    - event: done, data: {}
+    """
+    agent, _ = _get_agent()
+    conversation_id = request.conversation_id or str(uuid.uuid4())
+
+    async def event_stream():
+        try:
+            async for event in agent.query(request.query, conversation_id):
+                yield event.to_sse()
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'event': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'event': 'done'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Conversation-Id": conversation_id,
+        },
+    )
+
+
+@app.get("/api/assistant/conversations/{conversation_id}")
+async def get_conversation(conversation_id: str):
+    """Retrieve conversation history."""
+    _, store = _get_agent()
+    messages = await store.get_conversation(conversation_id)
+    return {
+        "conversation_id": conversation_id,
+        "messages": [msg.to_dict() for msg in messages],
+        "count": len(messages),
+    }
+
+
+@app.delete("/api/assistant/conversations/{conversation_id}")
+async def clear_conversation(conversation_id: str):
+    """Clear a conversation's history."""
+    _, store = _get_agent()
+    await store.clear_conversation(conversation_id)
+    return {"status": "cleared", "conversation_id": conversation_id}
+
+
+@app.get("/api/assistant/health")
+async def assistant_health():
+    """Check if the assistant (LLM) is available."""
+    try:
+        agent, _ = _get_agent()
+        health = await agent.check_health()
+        if health["status"] != "healthy":
+            raise HTTPException(status_code=503, detail=health)
+        return health
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=503, detail={"status": "unhealthy", "error": str(e)})

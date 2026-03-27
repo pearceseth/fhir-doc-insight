@@ -1,7 +1,5 @@
-import { Sidebar } from "./Sidebar";
+import { Sidebar, type NavItem } from "./Sidebar";
 import { TopHeader } from "./TopHeader";
-
-type NavItem = "dashboard" | "analytics";
 
 interface AppLayoutProps {
   activeNav: NavItem;
