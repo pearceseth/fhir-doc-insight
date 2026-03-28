@@ -32,6 +32,37 @@ services:
       sh -c "curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3.2\"}'"
     restart: "no"
 
+  hapi-fhir:
+    image: hapiproject/hapi:latest
+    container_name: clinidoc-hapi-fhir
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    environment:
+      - JAVA_OPTS=-Xms1g -Xmx3g
+      - hapi.fhir.fhir_version=R4
+      - hapi.fhir.allow_multiple_delete=true
+    volumes:
+      - hapi-data:/data/hapi
+
+  fhir-loader:
+    image: curlimages/curl:latest
+    container_name: clinidoc-fhir-loader
+    depends_on:
+      - hapi-fhir
+    volumes:
+      - ./synthea-data:/synthea-data
+      - ./scripts/load_synthea.sh:/load_synthea.sh:ro
+    environment:
+      - PATIENT_LIMIT=10
+    entrypoint: ["/bin/sh", "/load_synthea.sh"]
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -42,10 +73,12 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=llama3.2
-      - FHIR_BASE_URL=http://hapi.fhir.org/baseR4
+      - FHIR_BASE_URL=http://hapi-fhir:8080/fhir
     depends_on:
       ollama:
         condition: service_healthy
+      fhir-loader:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -67,3 +100,4 @@ services:
 
 volumes:
   ollama_data:
+  hapi-data:

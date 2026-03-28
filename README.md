@@ -60,3 +60,58 @@ Environment variables can be set in the backend:
 | `PATIENT_FETCH_COUNT` | `20` | Number of patients to fetch |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server endpoint |
 | `OLLAMA_MODEL` | `llama3` | LLM model to use |
+
+## Local Development Setup
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Java 11+ (for Synthea data generation)
+- [Synthea](https://github.com/synthetichealth/synthea/releases) — download `synthea-with-dependencies.jar`
+
+### Step 1 — Generate Synthea data (one time)
+
+Run Synthea locally to generate synthetic patient data and copy the
+output into `synthea-data/`:
+
+```bash
+java -jar synthea-with-dependencies.jar \
+  -p 100 \
+  --exporter.fhir.export true \
+  --exporter.fhir.transaction_bundle true \
+  Massachusetts
+
+cp output/fhir/*.json synthea-data/
+```
+
+This generates approximately 100–150 JSON files. These are gitignored
+and must be generated locally before first run.
+
+### Step 2 — Start the stack
+
+```bash
+docker compose up
+```
+
+**First run:** HAPI FHIR starts, becomes healthy (~30–60 seconds),
+then the loader POSTs all Synthea bundles (~2–5 minutes for 100
+patients). The backend starts only after loading is complete.
+
+**Subsequent runs:** The loader detects the `.loaded` marker and
+exits immediately. Startup takes ~30 seconds.
+
+### Step 3 — Verify
+
+FHIR server: http://localhost:8080/fhir/metadata
+Patient count: http://localhost:8080/fhir/Patient?_summary=count
+Backend: http://localhost:8000/docs
+
+### Resetting data
+
+To wipe the FHIR server and reload from scratch:
+
+```bash
+docker compose down -v          # removes hapi-data volume
+rm synthea-data/.loaded         # clears the loader marker
+docker compose up               # reloads all bundles on next start
+```

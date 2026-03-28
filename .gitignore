@@ -25,3 +25,9 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Synthea FHIR bundles — generate locally, do not commit
+synthea-data/*.json
+
+# Loader marker file
+synthea-data/.loaded
