@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  fetchEncounters,
   fetchEncounterDetails,
   type Encounter,
   type Observation,
@@ -16,12 +15,11 @@ import { MedicationsSection } from "@/components/encounter/MedicationsSection";
 import { CompletenessScore } from "@/components/encounter/CompletenessScore";
 
 interface EncounterDetailProps {
-  encounterId: string;
+  encounter: Encounter;
   onBack: () => void;
 }
 
-export function EncounterDetail({ encounterId, onBack }: EncounterDetailProps) {
-  const [encounter, setEncounter] = useState<Encounter | null>(null);
+export function EncounterDetail({ encounter, onBack }: EncounterDetailProps) {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [documents, setDocuments] = useState<DocumentReference[]>([]);
   const [medicationRequests, setMedicationRequests] = useState<MedicationRequest[]>([]);
@@ -32,13 +30,7 @@ export function EncounterDetail({ encounterId, onBack }: EncounterDetailProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        const [encountersRes, detailsRes] = await Promise.all([
-          fetchEncounters(),
-          fetchEncounterDetails(encounterId),
-        ]);
-
-        const found = encountersRes.encounters.find((e) => e.id === encounterId);
-        setEncounter(found || null);
+        const detailsRes = await fetchEncounterDetails(encounter.id);
         setObservations(detailsRes.observations);
         setDocuments(detailsRes.documentReferences);
         setMedicationRequests(detailsRes.medicationRequests);
@@ -50,7 +42,7 @@ export function EncounterDetail({ encounterId, onBack }: EncounterDetailProps) {
       }
     }
     loadData();
-  }, [encounterId]);
+  }, [encounter.id]);
 
   function getEncounterType(enc: Encounter): string {
     if (enc.type && enc.type.length > 0) {
@@ -87,17 +79,6 @@ export function EncounterDetail({ encounterId, onBack }: EncounterDetailProps) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-destructive">Error: {error}</p>
-      </div>
-    );
-  }
-
-  if (!encounter) {
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <Button variant="ghost" onClick={onBack} className="mb-4">
-          ← Back to Encounters
-        </Button>
-        <p className="text-muted-foreground">Encounter not found</p>
       </div>
     );
   }

@@ -4,31 +4,32 @@ import { Analytics } from "./pages/Analytics";
 import { Assistant } from "./pages/Assistant";
 import { EncounterDetail } from "./pages/EncounterDetail";
 import { AppLayout } from "./components/layout/AppLayout";
+import type { Encounter } from "./api/fhir";
 
 type Tab = "dashboard" | "analytics" | "assistant";
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
-  const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null);
+  const [selectedEncounter, setSelectedEncounter] = useState<Encounter | null>(null);
 
-  function handleSelectEncounter(encounterId: string) {
-    setSelectedEncounterId(encounterId);
+  function handleSelectEncounter(encounter: Encounter) {
+    setSelectedEncounter(encounter);
   }
 
   function handleBackToList() {
-    setSelectedEncounterId(null);
+    setSelectedEncounter(null);
   }
 
   function handleTabChange(tab: Tab) {
-    setSelectedEncounterId(null);
+    setSelectedEncounter(null);
     setActiveTab(tab);
   }
 
   function renderContent() {
     switch (activeTab) {
       case "dashboard":
-        return selectedEncounterId ? (
-          <EncounterDetail encounterId={selectedEncounterId} onBack={handleBackToList} />
+        return selectedEncounter ? (
+          <EncounterDetail encounter={selectedEncounter} onBack={handleBackToList} />
         ) : (
           <Dashboard onSelectEncounter={handleSelectEncounter} />
         );

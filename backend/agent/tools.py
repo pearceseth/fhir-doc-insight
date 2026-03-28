@@ -103,7 +103,9 @@ def _parse_date_range(date_from: str | None, date_to: str | None) -> tuple[date 
     parsed_to = None
 
     if date_from:
-        if date_from == "last_week":
+        if date_from == "today":
+            parsed_from = date.today()
+        elif date_from == "last_week":
             parsed_from = date.today() - timedelta(days=7)
         elif date_from == "last_month":
             parsed_from = date.today() - timedelta(days=30)
