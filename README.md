@@ -4,7 +4,7 @@ A clinical documentation viewer that aggregates patient and encounter data from 
 
 ## Overview
 
-ClinDoc Insight connects to FHIR R4 servers to fetch and display clinical data in a unified dashboard. The application caches data locally for fast access and provides a clean interface for viewing patient encounters.
+Connects to FHIR R4 servers to fetch and display clinical data in a unified dashboard. The application caches data locally for fast access and provides a clean interface for viewing patient encounters.
 
 ## Prerequisites
 
