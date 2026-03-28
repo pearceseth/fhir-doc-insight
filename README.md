@@ -19,7 +19,15 @@ ClinDoc Insight connects to FHIR R4 servers to fetch and display clinical data i
 docker compose up -d
 ```
 
-Open http://localhost:5173 in your browser.
+On first run, the llama3 model (~4GB) will be downloaded. Watch progress with:
+
+```bash
+docker compose logs -f ollama-pull
+```
+
+Once the model is pulled, the assistant will be available. Open http://localhost:5173 in your browser.
+
+**GPU Support (Optional):** For NVIDIA GPU acceleration, uncomment the `deploy` section under the `ollama` service in `docker-compose.yml`.
 
 ### Manual Setup
 
@@ -50,3 +58,5 @@ Environment variables can be set in the backend:
 | `FHIR_BASE_URL` | `http://hapi.fhir.org/baseR4` | FHIR server endpoint |
 | `FHIR_CACHE_TTL` | `3600` | Cache time-to-live in seconds |
 | `PATIENT_FETCH_COUNT` | `20` | Number of patients to fetch |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server endpoint |
+| `OLLAMA_MODEL` | `llama3` | LLM model to use |

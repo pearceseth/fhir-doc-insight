@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { fetchEncounters, type Encounter, type EncounterFilters } from "@/api/fhir";
 
 interface DashboardProps {
-  onSelectEncounter: (encounterId: string) => void;
+  onSelectEncounter: (encounter: Encounter) => void;
 }
 
 const PAGE_SIZE = 20;
@@ -146,7 +146,7 @@ export function Dashboard({ onSelectEncounter }: DashboardProps) {
                 <TableRow
                   key={encounter.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => onSelectEncounter(encounter.id)}
+                  onClick={() => onSelectEncounter(encounter)}
                 >
                   <TableCell>{encounter._patient_name || "Unknown"}</TableCell>
                   <TableCell>{getEncounterType(encounter)}</TableCell>

@@ -1,7 +1,7 @@
-import { LayoutDashboard, ChartNetwork } from "lucide-react";
+import { LayoutDashboard, BarChart3, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type NavItem = "dashboard" | "agentic";
+export type NavItem = "dashboard" | "analytics" | "assistant";
 
 interface SidebarProps {
   activeNav: NavItem;
@@ -10,7 +10,8 @@ interface SidebarProps {
 
 const navItems: { id: NavItem; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "agentic", label: "Agentic Mode", icon: ChartNetwork },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "assistant", label: "Assistant", icon: MessageSquare },
 ];
 
 export function Sidebar({ activeNav, onNavChange }: SidebarProps) {
