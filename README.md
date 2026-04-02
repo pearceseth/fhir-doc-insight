@@ -6,9 +6,11 @@ A clinical documentation viewer that aggregates patient and encounter data from 
 
 Connects to FHIR R4 servers to fetch and display clinical data in a unified dashboard. The application caches data locally for fast access and provides a clean interface for viewing patient encounters.
 
-[Dashboard Screenshot](docs/images/dashboard.png)
+![Dashboard Screenshot](docs/images/dashboard.png)
 
-[Agent Conversation Screenshot](docs/images/Screenshot 2026-04-02 at 1.14.08 PM.png)
+![Encounter Detail Screenshot](docs/images/detail-view.png)
+
+![Agent Conversation Screenshot](docs/images/agent-convo.png)
 
 ## Prerequisites
 
