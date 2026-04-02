@@ -26,8 +26,12 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Synthea FHIR bundles — generate locally, do not commit
+# Synthea
+synthea-with-dependencies.jar
 synthea-data/*.json
-
-# Loader marker file
 synthea-data/.loaded
+synthea-data/large_backup/
+synthea-data-new/
+synthea-data-batch*/
+synthea-data-priority/
+keep_active_patients.json

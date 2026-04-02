@@ -6,6 +6,10 @@ A clinical documentation viewer that aggregates patient and encounter data from 
 
 Connects to FHIR R4 servers to fetch and display clinical data in a unified dashboard. The application caches data locally for fast access and provides a clean interface for viewing patient encounters.
 
+[Dashboard Screenshot](docs/images/dashboard.png)
+
+[Agent Conversation Screenshot](docs/images/Screenshot 2026-04-02 at 1.14.08 PM.png)
+
 ## Prerequisites
 
 - Docker and Docker Compose, or:
@@ -67,12 +71,18 @@ Environment variables can be set in the backend:
 
 - Docker and Docker Compose
 - Java 11+ (for Synthea data generation)
-- [Synthea](https://github.com/synthetichealth/synthea/releases) — download `synthea-with-dependencies.jar`
 
-### Step 1 — Generate Synthea data (one time)
+### Step 1 — Download Synthea
 
-Run Synthea locally to generate synthetic patient data and copy the
-output into `synthea-data/`:
+Download the Synthea JAR (~150MB) from GitHub releases:
+
+```bash
+curl -LO https://github.com/synthetichealth/synthea/releases/latest/download/synthea-with-dependencies.jar
+```
+
+### Step 2 — Generate Synthea data (one time)
+
+Run Synthea locally to generate synthetic patient data:
 
 ```bash
 java -jar synthea-with-dependencies.jar \
@@ -87,7 +97,50 @@ cp output/fhir/*.json synthea-data/
 This generates approximately 100–150 JSON files. These are gitignored
 and must be generated locally before first run.
 
-### Step 2 — Start the stack
+**Tip:** To generate patients with recent encounters, use a reference date and keep module:
+
+```bash
+# Create keep module for patients with chronic conditions
+cat > keep_active_patients.json << 'EOF'
+{
+  "name": "Keep Patients with Active Conditions",
+  "states": {
+    "Initial": { "type": "Initial", "direct_transition": "Check" },
+    "Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {"condition_type": "Active Condition", "codes": [{"system": "SNOMED-CT", "code": "44054006"}]},
+              {"condition_type": "Active Condition", "codes": [{"system": "SNOMED-CT", "code": "38341003"}]},
+              {"condition_type": "Active Condition", "codes": [{"system": "SNOMED-CT", "code": "195967001"}]}
+            ]
+          },
+          "transition": "Keep"
+        },
+        {"transition": "Discard"}
+      ]
+    },
+    "Keep": { "type": "Terminal" },
+    "Discard": { "type": "Terminal" }
+  }
+}
+EOF
+
+# Generate with today's reference date
+java -jar synthea-with-dependencies.jar \
+  -p 50 \
+  -r $(date +%Y%m%d) \
+  -k keep_active_patients.json \
+  --exporter.fhir.export true \
+  --exporter.fhir.transaction_bundle true \
+  --exporter.baseDirectory ./synthea-data \
+  Massachusetts
+```
+
+### Step 3 — Start the stack
 
 ```bash
 docker compose up
@@ -100,7 +153,7 @@ patients). The backend starts only after loading is complete.
 **Subsequent runs:** The loader detects the `.loaded` marker and
 exits immediately. Startup takes ~30 seconds.
 
-### Step 3 — Verify
+### Step 4 — Verify
 
 FHIR server: http://localhost:8080/fhir/metadata
 Patient count: http://localhost:8080/fhir/Patient?_summary=count

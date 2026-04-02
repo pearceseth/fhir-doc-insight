@@ -24,6 +24,13 @@ from fhir_client.client import fhir_client
 from analytics.completeness import calculate_completeness
 from analytics.observations import calculate_observation_density
 from analytics.medications import calculate_medication_reconciliation
+from agent.tools import (
+    search_encounters,
+    get_documentation_completeness as get_doc_completeness_tool,
+    get_observation_summary,
+    get_medication_reconciliation_status,
+    get_documentation_statistics,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -412,3 +419,64 @@ async def assistant_health():
         raise
     except Exception as e:
         raise HTTPException(status_code=503, detail={"status": "unhealthy", "error": str(e)})
+
+
+# ============================================================================
+# Tools API Endpoints (Direct invocation of agent tools)
+# ============================================================================
+
+
+@app.get("/api/tools/encounters", tags=["Tools"])
+async def tools_search_encounters(
+    status: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    encounter_type: str | None = None,
+    limit: int = 50,
+):
+    """Direct invocation of search_encounters tool."""
+    return await search_encounters.ainvoke({
+        "status": status,
+        "date_from": date_from,
+        "date_to": date_to,
+        "encounter_type": encounter_type,
+        "limit": limit,
+    })
+
+
+@app.get("/api/tools/encounters/{encounter_id}/completeness", tags=["Tools"])
+async def tools_get_completeness(encounter_id: str):
+    """Direct invocation of get_documentation_completeness tool."""
+    return await get_doc_completeness_tool.ainvoke({"encounter_id": encounter_id})
+
+
+@app.get("/api/tools/encounters/{encounter_id}/observations", tags=["Tools"])
+async def tools_get_observations(
+    encounter_id: str,
+    category: str | None = None,
+):
+    """Direct invocation of get_observation_summary tool."""
+    return await get_observation_summary.ainvoke({
+        "encounter_id": encounter_id,
+        "category": category,
+    })
+
+
+@app.get("/api/tools/encounters/{encounter_id}/medication-reconciliation", tags=["Tools"])
+async def tools_get_medication_reconciliation(encounter_id: str):
+    """Direct invocation of get_medication_reconciliation_status tool."""
+    return await get_medication_reconciliation_status.ainvoke({"encounter_id": encounter_id})
+
+
+@app.get("/api/tools/statistics", tags=["Tools"])
+async def tools_get_statistics(
+    status: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+):
+    """Direct invocation of get_documentation_statistics tool."""
+    return await get_documentation_statistics.ainvoke({
+        "status": status,
+        "date_from": date_from,
+        "date_to": date_to,
+    })

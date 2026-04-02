@@ -56,10 +56,10 @@ services:
     depends_on:
       - hapi-fhir
     volumes:
-      - ./synthea-data:/synthea-data
+      - ./synthea-data-priority:/synthea-data
       - ./scripts/load_synthea.sh:/load_synthea.sh:ro
     environment:
-      - PATIENT_LIMIT=10
+      - PATIENT_LIMIT=40
     entrypoint: ["/bin/sh", "/load_synthea.sh"]
     restart: "no"
 

@@ -2,6 +2,8 @@
 
 import logging
 from datetime import date, timedelta
+
+from dateutil import parser as dateutil_parser
 from typing import Any
 
 from langchain_core.tools import tool
@@ -89,12 +91,12 @@ async def _ensure_medications_loaded(encounter_id: str) -> tuple[list[dict], lis
     return med_requests, med_admins
 
 
-MAX_DATE_RANGE_DAYS = 7
+MAX_DATE_RANGE_DAYS = 100
 
 
 def _parse_date_range(date_from: str | None, date_to: str | None) -> tuple[date | None, date | None, str | None]:
     """
-    Parse date strings into date objects. Handles relative dates.
+    Parse date strings into date objects. Handles multiple formats and relative dates.
     Returns (from_date, to_date, error_message).
     Defaults to last week if no range specified.
     Returns error if range exceeds MAX_DATE_RANGE_DAYS.
@@ -111,18 +113,18 @@ def _parse_date_range(date_from: str | None, date_to: str | None) -> tuple[date 
             parsed_from = date.today() - timedelta(days=30)
         else:
             try:
-                parsed_from = date.fromisoformat(date_from)
-            except ValueError:
-                pass
+                parsed_from = dateutil_parser.parse(date_from, dayfirst=False).date()
+            except (ValueError, dateutil_parser.ParserError):
+                return None, None, f"Invalid date_from format: '{date_from}'. Use YYYY-MM-DD, MM/DD/YYYY, or similar."
 
     if date_to:
         if date_to == "today":
             parsed_to = date.today()
         else:
             try:
-                parsed_to = date.fromisoformat(date_to)
-            except ValueError:
-                pass
+                parsed_to = dateutil_parser.parse(date_to, dayfirst=False).date()
+            except (ValueError, dateutil_parser.ParserError):
+                return None, None, f"Invalid date_to format: '{date_to}'. Use YYYY-MM-DD, MM/DD/YYYY, or similar."
 
     # Default to last week if no date range specified
     if parsed_from is None and parsed_to is None:
